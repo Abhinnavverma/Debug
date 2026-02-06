@@ -39,6 +39,7 @@ export const problems: Problem[] = [
 [2023-10-27 10:01:15] INFO: Request received for /login
 [2023-10-27 10:01:15] INFO: Forwarding request to auth-service
 [2023-10-27 10:01:16] INFO: Request successful for /login
+[2023-10-27 10:02:30] INFO: Request received for /status - successful
 `,
       },
       {
@@ -49,8 +50,9 @@ export const problems: Problem[] = [
 [2023-10-27 10:00:07] WARN: Database query took 6000ms
 [2023-10-27 10:00:07] INFO: User 'testuser1' authenticated successfully
 [2023-10-27 10:01:15] INFO: Login request for user 'testuser2'
-[2023-10-27 10:01:15] INFO: Querying user database for 'testuser2'
+[2023-10-27 10:01:15] INFO: Cache hit for user 'testuser2' session token.
 [2023-10-27 10:01:15] INFO: User 'testuser2' authenticated successfully
+[2023-10-27 10:03:00] WARN: Cache service connection failure. Falling back to DB.
 `,
       },
       {
@@ -64,6 +66,7 @@ export const problems: Problem[] = [
 [2023-10-27 10:01:15] INFO: Connection received from auth-service
 [2023-10-27 10:01:15] INFO: Executing query: SELECT * FROM users WHERE username = 'testuser2'
 [2023-10-27 10:01:15] INFO: Query executed in 50ms. 1 row returned.
+[2023-10-27 10:04:01] ERROR: Connection refused: too many connections.
 `,
       },
     ],
@@ -73,7 +76,7 @@ export const problems: Problem[] = [
       reasoning:
         "The root cause is a slow database query in the 'user-database'. The log `WARNING: Query executed without index. Full table scan performed on 'users' table.` is the key signal. This causes the `auth-service` to wait for 6 seconds, which in turn causes the `api-gateway` to time out.",
       redHerrings:
-        "The problem is intermittent. This might suggest a network issue or a problem with a specific service instance. However, the logs point directly to a database performance problem.",
+        "The problem is intermittent. This might suggest a network issue or a problem with a specific service instance. The 'too many connections' error or 'Cache service connection failure' are meant to be distractors. While they are issues to be noted, the primary cause of the timeout is the unindexed query.",
       seniorIntuition:
         "A senior engineer would immediately suspect a database issue when seeing a high, consistent latency number like 6000ms. They would check database logs for slow query warnings or use a database monitoring tool to inspect query performance. The lack of an index on a frequently queried column like 'username' is a common and critical performance bug.",
     },
@@ -97,9 +100,12 @@ export const problems: Problem[] = [
 [2023-11-01 14:20:09] INFO: Resizing to medium.
 [2023-11-01 14:20:12] INFO: Resizing to large.
 [2023-11-01 14:20:13] INFO: Processing complete for 'large-image-a.jpg'.
+[2023-11-01 14:21:00] INFO: New job received. Image: 'small-image-c.png', size: 1MB.
+[2023-11-01 14:21:01] INFO: Processing complete for 'small-image-c.png'.
 [2023-11-01 14:22:10] INFO: New job received. Image: 'huge-image-b.tiff', size: 150MB.
 [2023-11-01 14:22:11] INFO: Starting processing for 'huge-image-b.tiff'.
 [2023-11-01 14:22:12] INFO: Reading image into memory.
+[2023-11-01 14:22:15] WARN: Cloud storage latency detected. Upload may be slow.
 [2023-11-01 14:22:18] INFO: Resizing to thumbnail.
 [2023-11-01 14:22:25] INFO: Resizing to medium.
 [2023-11-01 14:22:35] FATAL: Process terminating due to Out of Memory.
@@ -111,6 +117,7 @@ export const problems: Problem[] = [
 [2023-11-01 14:20:00] INFO: image-processor-instance-1 | Memory Usage: 128MB / 512MB
 [2023-11-01 14:20:10] INFO: image-processor-instance-1 | Memory Usage: 256MB / 512MB
 [2023-11-01 14:20:14] INFO: image-processor-instance-1 | Memory Usage: 130MB / 512MB
+[2023-11-01 14:21:05] INFO: image-processor-instance-1 | Memory Usage: 130MB / 512MB
 [2023-11-01 14:22:00] INFO: image-processor-instance-1 | Memory Usage: 129MB / 512MB
 [2023-11-01 14:22:15] INFO: image-processor-instance-1 | Memory Usage: 480MB / 512MB
 [2023-11-01 14:22:20] INFO: image-processor-instance-1 | Memory Usage: 495MB / 512MB
@@ -123,6 +130,9 @@ export const problems: Problem[] = [
 [2023-11-01 14:20:04] INFO: Message sent to queue: { image: 'large-image-a.jpg' }
 [2023-11-01 14:20:05] INFO: Message received by consumer: 'image-processor-instance-1'
 [2023-11-01 14:20:14] INFO: Message acknowledged: { image: 'large-image-a.jpg' }
+[2023-11-01 14:21:00] INFO: Message sent to queue: { image: 'small-image-c.png' }
+[2023-11-01 14:21:00] INFO: Message received by consumer: 'image-processor-instance-1'
+[2023-11-01 14:21:02] INFO: Message acknowledged: { image: 'small-image-c.png' }
 [2023-11-01 14:22:09] INFO: Message sent to queue: { image: 'huge-image-b.tiff' }
 [2023-11-01 14:22:10] INFO: Message received by consumer: 'image-processor-instance-1'
 `,
@@ -134,7 +144,7 @@ export const problems: Problem[] = [
       reasoning:
         "The 'image-processor' log shows it reads the entire image into memory. The 'application-metrics' log confirms this: memory usage spikes dramatically when processing the 150MB TIFF file, exceeding the 512MB limit and causing the OOM crash. The process for the smaller 15MB file completes successfully, and memory is reclaimed, indicating it's not a classic leak but a resource exhaustion problem.",
       redHerrings:
-        "The term 'memory leak' in the description might mislead one to look for un-freed resources after a job is done. However, the metrics show memory usage returning to normal after the successful job, pointing away from a traditional leak.",
+        "The term 'memory leak' in the description might mislead one to look for un-freed resources after a job is done. The 'Cloud storage latency' warning is also a distraction. The metrics show memory usage returning to normal after the successful job, pointing away from a traditional leak and towards resource exhaustion during processing.",
       seniorIntuition:
         'A senior developer would be wary of any process that loads an entire user-provided file into memory without constraints. The first thought would be to check how the image is being read and processed. The solution is almost always to use streams or chunked processing for large files to keep memory usage predictable and low, regardless of input file size.',
     },

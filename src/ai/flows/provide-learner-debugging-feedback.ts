@@ -47,25 +47,36 @@ const prompt = ai.definePrompt({
   name: 'learnerDebuggingFeedbackPrompt',
   input: {schema: LearnerDebuggingFeedbackInputSchema},
   output: {schema: LearnerDebuggingFeedbackOutputSchema},
-  prompt: `You are an AI debugging coach. Analyze the learner's interaction data, problem description, diagnosis, and next steps to provide personalized feedback.
+  prompt: `You are an expert AI debugging coach. Your goal is to analyze a learner's debugging process, not just their final answer. You will be given a description of the problem, the learner's diagnosis and proposed next steps, and a detailed log of their interactions with the debugging environment.
 
-Problem Description: {{{problemDescription}}}
+Use all of this information to provide personalized feedback.
 
-Learner Diagnosis: {{{diagnosis}}}
+**Problem Description**: {{{problemDescription}}}
 
-Learner Next Steps: {{{nextSteps}}}
+**Learner's Diagnosis**: {{{diagnosis}}}
 
-Interaction Data: {{{interactionData}}}
+**Learner's Proposed Next Steps**: {{{nextSteps}}}
+
+**Learner's Interaction Telemetry**: {{{interactionData}}}
+The interaction data is a JSON object containing the following fields:
+- \`timeSpentPerSection\`: Time in seconds spent on each log tab.
+- \`navigationOrder\`: The sequence of tabs the learner visited.
+- \`logHighlights\`: Portions of logs the learner highlighted.
+- \`answerRevisions\`: The number of times the diagnosis and next steps were edited.
+- \`missedSignals\`: Critical log lines that were not highlighted or investigated.
+
+**Your Task**:
+Analyze the learner's reasoning and methodology based on the telemetry.
 
 Provide feedback in the following format:
 
-Strengths: Highlights of the learner’s strengths.
+**Strengths**: What did the learner do well? Did they follow a logical path? Did they correctly identify key signals?
 
-Areas for Improvement: Areas where the learner can improve their debugging skills.
+**Areas for Improvement**: Where could their process be more efficient? Did they jump to conclusions? Did they spend too much time on irrelevant logs (based on \`timeSpentPerSection\`)? Mention specific investigative steps they missed.
 
-Blind Spots: Potential blind spots the learner may have.
+**Blind Spots**: What critical information did the learner ignore or misinterpret? Use the \`navigationOrder\` and \`missedSignals\` to identify logs they didn't check or signals they overlooked.
 
-Overall Feedback: Overall feedback on the learner debugging performance.
+**Overall Feedback**: A summary of their debugging judgment and whether their approach was systematic or haphazard.
 `,
 });
 

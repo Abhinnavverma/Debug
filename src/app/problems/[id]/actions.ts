@@ -39,14 +39,7 @@ export async function getFeedback(
   }
 
   const { diagnosis, nextSteps } = validatedFields.data;
-
-  const interactionData = JSON.stringify({
-    timeSpentPerSection: { "auth-service": 300, "database-proxy": 120, "api-gateway": 60 },
-    navigationOrder: ["auth-service", "database-proxy", "api-gateway"],
-    highlights: ["timeout error in auth-service logs", "connection refused in database-proxy"],
-    answerRevisions: 2,
-    missedSignals: ["high CPU usage on api-gateway"],
-  });
+  const interactionData = formData.get('interactionData') as string || '{}';
 
   try {
     const feedback = await provideLearnerDebuggingFeedback({

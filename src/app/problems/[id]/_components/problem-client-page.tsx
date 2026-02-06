@@ -21,7 +21,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useFormStatus } from 'react-dom';
 import { getFeedback, type FormState } from '../actions';
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { FileCode, Lightbulb, AlertTriangle, BrainCircuit, CheckCircle, Milestone } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -30,7 +30,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-      {pending ? 'Analyzing...' : 'Get AI Feedback'}
+      {pending ? 'Analyzing...' : 'Analyze Debugging Reasoning'}
     </Button>
   );
 }
@@ -43,6 +43,12 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
   const { toast } = useToast();
   const [showExplanation, setShowExplanation] = useState(false);
 
+  // Interaction tracking state
+  const startTimeRef = useRef(Date.now());
+  const [tabChanges, setTabChanges] = useState<{ tab: string; timestamp: number }[]>([]);
+  const diagnosisRevisionsRef = useRef(0);
+  const nextStepsRevisionsRef = useRef(0);
+
   useEffect(() => {
     if (state.error && !state.fieldErrors) {
       toast({
@@ -52,6 +58,50 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
       });
     }
   }, [state.error, state.fieldErrors, toast]);
+  
+  const handleTabChange = (tab: string) => {
+    setTabChanges(prev => [...prev, { tab, timestamp: Date.now() }]);
+  };
+
+  const handleDiagnosisChange = () => {
+    diagnosisRevisionsRef.current += 1;
+  };
+
+  const handleNextStepsChange = () => {
+    nextStepsRevisionsRef.current += 1;
+  };
+  
+  const onFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const end = Date.now();
+    const events = [
+      { tab: problem.logs[0].service, timestamp: startTimeRef.current },
+      ...tabChanges,
+      { tab: 'submit', timestamp: end }
+    ];
+
+    const timeSpentPerSection: { [key: string]: number } = {};
+    for (let i = 0; i < events.length - 1; i++) {
+        const currentEvent = events[i];
+        const nextEvent = events[i+1];
+        const duration = (nextEvent.timestamp - currentEvent.timestamp) / 1000;
+        if (currentEvent.tab !== 'submit') {
+          timeSpentPerSection[currentEvent.tab] = (timeSpentPerSection[currentEvent.tab] || 0) + duration;
+        }
+    }
+
+    const navigationOrder = events.map(e => e.tab).slice(0, -1);
+
+    const data = {
+        timeSpentPerSection,
+        navigationOrder,
+        highlights: [], // This feature is not implemented on the client yet
+        answerRevisions: diagnosisRevisionsRef.current + nextStepsRevisionsRef.current,
+        missedSignals: [], // This feature is not implemented on the client yet
+    };
+
+    (e.currentTarget.elements.namedItem('interactionData') as HTMLInputElement).value = JSON.stringify(data);
+  };
+
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -75,7 +125,7 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
               <CardTitle className="flex items-center gap-2"><FileCode /> Logs</CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue={problem.logs[0].service}>
+              <Tabs defaultValue={problem.logs[0].service} onValueChange={handleTabChange}>
                 <TabsList>
                   {problem.logs.map((log) => (
                     <TabsTrigger key={log.service} value={log.service}>
@@ -101,16 +151,17 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
                 Based on the logs, what do you think the root cause is, and what are your proposed next steps?
               </CardDescription>
             </CardHeader>
-            <form action={formAction}>
+            <form action={formAction} onSubmit={onFormSubmit}>
               <CardContent className="space-y-4">
+                <input type="hidden" name="interactionData" />
                 <div>
                   <label htmlFor="diagnosis" className="block text-sm font-medium mb-1">Your Diagnosis</label>
-                  <Textarea id="diagnosis" name="diagnosis" rows={4} placeholder="e.g., The latency appears to be caused by..." />
+                  <Textarea id="diagnosis" name="diagnosis" rows={4} placeholder="e.g., The latency appears to be caused by..." onChange={handleDiagnosisChange} />
                   {state.fieldErrors?.diagnosis && <p className="text-sm text-destructive mt-1">{state.fieldErrors.diagnosis[0]}</p>}
                 </div>
                 <div>
                   <label htmlFor="nextSteps" className="block text-sm font-medium mb-1">Proposed Next Steps</label>
-                  <Textarea id="nextSteps" name="nextSteps" rows={4} placeholder="e.g., First, I would check the database query performance..." />
+                  <Textarea id="nextSteps" name="nextSteps" rows={4} placeholder="e.g., First, I would check the database query performance..." onChange={handleNextStepsChange}/>
                   {state.fieldErrors?.nextSteps && <p className="text-sm text-destructive mt-1">{state.fieldErrors.nextSteps[0]}</p>}
                 </div>
               </CardContent>
