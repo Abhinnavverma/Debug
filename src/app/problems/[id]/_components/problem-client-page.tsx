@@ -19,9 +19,9 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
 import { getFeedback, type FormState } from '../actions';
-import { useEffect, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { FileCode, Lightbulb, AlertTriangle, BrainCircuit, CheckCircle, Milestone } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -38,7 +38,7 @@ function SubmitButton() {
 export function ProblemClientPage({ problem }: { problem: Problem }) {
   const initialState: FormState = { feedback: undefined, error: undefined, fieldErrors: {} };
   const getFeedbackWithProblem = getFeedback.bind(null, problem);
-  const [state, formAction] = useFormState(getFeedbackWithProblem, initialState);
+  const [state, formAction] = useActionState(getFeedbackWithProblem, initialState);
 
   const { toast } = useToast();
   const [showExplanation, setShowExplanation] = useState(false);
