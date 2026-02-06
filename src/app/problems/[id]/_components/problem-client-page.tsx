@@ -18,13 +18,24 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useFormStatus } from 'react-dom';
 import { getFeedback, type FormState } from '../actions';
 import { useActionState, useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { FileCode, Lightbulb, AlertTriangle, BrainCircuit, CheckCircle, Milestone } from 'lucide-react';
+import {
+  FileCode,
+  Lightbulb,
+  Milestone,
+  GaugeCircle,
+  LocateFixed,
+  Signal,
+  ListChecks,
+  Rocket,
+  Info,
+} from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -32,6 +43,27 @@ function SubmitButton() {
     <Button type="submit" disabled={pending} className="w-full sm:w-auto">
       {pending ? 'Analyzing...' : 'Analyze Debugging Reasoning'}
     </Button>
+  );
+}
+
+function Scorecard({
+  score,
+  title,
+  icon: Icon,
+}: {
+  score: number;
+  title: string;
+  icon: React.ElementType;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Icon className="h-5 w-5 text-muted-foreground" />
+        <h4 className="font-medium">{title}</h4>
+        <span className="ml-auto font-semibold">{score}/10</span>
+      </div>
+      <Progress value={score * 10} />
+    </div>
   );
 }
 
@@ -101,6 +133,13 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
 
     (e.currentTarget.elements.namedItem('interactionData') as HTMLInputElement).value = JSON.stringify(data);
   };
+
+  const verdictColor =
+    state.feedback?.verdict === 'Ready to Ship Independently'
+      ? 'text-green-600'
+      : state.feedback?.verdict === 'Requires Support'
+      ? 'text-amber-600'
+      : 'text-red-600';
 
 
   return (
@@ -174,33 +213,72 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
           {state.feedback && (
             <Card className="mt-8 bg-gradient-to-br from-card to-secondary/50 shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><BrainCircuit /> AI Feedback Analysis</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <GaugeCircle /> AI Analysis Report
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <Accordion type="multiple" defaultValue={['overall', 'strengths', 'improvement', 'blind-spots']} className="w-full">
-                  <AccordionItem value="overall">
-                    <AccordionTrigger className='font-semibold'>Overall Feedback</AccordionTrigger>
-                    <AccordionContent>{state.feedback.overallFeedback}</AccordionContent>
-                  </AccordionItem>
-                  <AccordionItem value="strengths">
-                    <AccordionTrigger className='font-semibold text-green-600'><CheckCircle className="mr-2"/>Strengths</AccordionTrigger>
-                    <AccordionContent>{state.feedback.strengths}</AccordionContent>
-                  </AccordionItem>
-                  <AccordionItem value="improvement">
-                    <AccordionTrigger className='font-semibold text-amber-600'><AlertTriangle className="mr-2"/>Areas for Improvement</AccordionTrigger>
-                    <AccordionContent>{state.feedback.areasForImprovement}</AccordionContent>
-                  </AccordionItem>
-                  <AccordionItem value="blind-spots">
-                    <AccordionTrigger className='font-semibold text-red-600'><AlertTriangle className="mr-2"/>Blind Spots</AccordionTrigger>
-                    <AccordionContent>{state.feedback.blindSpots}</AccordionContent>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="flex flex-col items-center justify-center space-y-4 p-6 bg-muted rounded-lg">
+                  <h3 className="text-lg font-medium text-muted-foreground">
+                    Shipping Readiness Score
+                  </h3>
+                  <div className="relative">
+                    <p className="text-7xl font-bold">
+                      {state.feedback.shippingReadinessScore}
+                    </p>
+                  </div>
+                  <p className={cn('text-xl font-semibold', verdictColor)}>
+                    {state.feedback.verdict}
+                  </p>
+                </div>
+                <div className="space-y-6">
+                  <Scorecard
+                    score={state.feedback.scorecard.investigativeEngagement}
+                    title="Investigative Engagement"
+                    icon={LocateFixed}
+                  />
+                  <Scorecard
+                    score={state.feedback.scorecard.signalDetection}
+                    title="Signal Detection"
+                    icon={Signal}
+                  />
+                  <Scorecard
+                    score={state.feedback.scorecard.hypothesisFormation}
+                    title="Hypothesis Formation"
+                    icon={Lightbulb}
+                  />
+                  <Scorecard
+                    score={state.feedback.scorecard.debuggingDiscipline}
+                    title="Debugging Discipline"
+                    icon={ListChecks}
+                  />
+                  <Scorecard
+                    score={state.feedback.scorecard.decisionReadiness}
+                    title="Decision Readiness"
+                    icon={Rocket}
+                  />
+                </div>
+              </CardContent>
+              <CardFooter className='flex-col items-start gap-4'>
+                 <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="justification">
+                    <AccordionTrigger>
+                      <div className="flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        <span>Analysis Justification</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground">
+                      {state.feedback.justification}
+                    </AccordionContent>
                   </AccordionItem>
                 </Accordion>
-                <Separator className="my-6" />
+                <Separator />
                 <Button onClick={() => setShowExplanation(true)} disabled={showExplanation}>
-                  <Lightbulb className="mr-2" />
+                  <Milestone className="mr-2" />
                   Unlock Official Explanation
                 </Button>
-              </CardContent>
+              </CardFooter>
             </Card>
           )}
 

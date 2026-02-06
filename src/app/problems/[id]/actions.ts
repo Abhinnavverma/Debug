@@ -1,9 +1,9 @@
 'use server';
 
 import {
-  provideLearnerDebuggingFeedback,
-  type LearnerDebuggingFeedbackOutput,
-} from '@/ai/flows/provide-learner-debugging-feedback';
+  analyzeCandidateSkills,
+  type AnalyzeCandidateSkillsOutput,
+} from '@/ai/flows/analyze-candidate-debug-skills';
 import type { Problem } from '@/lib/data';
 import { z } from 'zod';
 
@@ -13,7 +13,7 @@ const formSchema = z.object({
 });
 
 export type FormState = {
-  feedback?: LearnerDebuggingFeedbackOutput;
+  feedback?: AnalyzeCandidateSkillsOutput;
   error?: string;
   fieldErrors?: {
     diagnosis?: string[];
@@ -42,8 +42,9 @@ export async function getFeedback(
   const interactionData = formData.get('interactionData') as string || '{}';
 
   try {
-    const feedback = await provideLearnerDebuggingFeedback({
+    const feedback = await analyzeCandidateSkills({
       problemDescription: problem.description,
+      evaluationRubric: problem.evaluationRubric,
       diagnosis,
       nextSteps,
       interactionData,
