@@ -13,8 +13,12 @@ export function Header() {
           </h1>
         </Link>
         <div className="flex items-center gap-2">
-            <Button variant="ghost">Learner</Button>
-            <Button variant="ghost" disabled>Company (soon)</Button>
+            <Button variant="ghost" asChild>
+                <Link href="/">Learner</Link>
+            </Button>
+            <Button variant="ghost" asChild>
+                <Link href="/company">Company</Link>
+            </Button>
         </div>
       </div>
     </header>

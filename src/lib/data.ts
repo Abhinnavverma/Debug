@@ -18,6 +18,7 @@ export type Problem = {
   logs: Log[];
   evaluationRubric: string;
   explanation: Explanation;
+  tags: string[];
 };
 
 export const problems: Problem[] = [
@@ -76,6 +77,7 @@ export const problems: Problem[] = [
       seniorIntuition:
         "A senior engineer would immediately suspect a database issue when seeing a high, consistent latency number like 6000ms. They would check database logs for slow query warnings or use a database monitoring tool to inspect query performance. The lack of an index on a frequently queried column like 'username' is a common and critical performance bug.",
     },
+    tags: ['database', 'performance', 'authentication'],
   },
   {
     id: 'image-processor-oom',
@@ -136,5 +138,6 @@ export const problems: Problem[] = [
       seniorIntuition:
         'A senior developer would be wary of any process that loads an entire user-provided file into memory without constraints. The first thought would be to check how the image is being read and processed. The solution is almost always to use streams or chunked processing for large files to keep memory usage predictable and low, regardless of input file size.',
     },
+    tags: ['memory', 'performance', 'media', 'backend'],
   },
 ];
