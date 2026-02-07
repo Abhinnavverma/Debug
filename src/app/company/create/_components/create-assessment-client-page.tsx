@@ -15,6 +15,10 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { problems } from '@/lib/data';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, Copy, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { createAssessment } from '../actions';
 
 type SelectionMode = 'manual' | 'random';
 
@@ -24,6 +28,9 @@ export function CreateAssessmentClientPage() {
   const [selectedProblems, setSelectedProblems] = useState<string[]>([]);
   const [numQuestions, setNumQuestions] = useState(1);
   const [tags, setTags] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdId, setCreatedId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleProblemToggle = (problemId: string, checked: boolean) => {
     setSelectedProblems((prev) =>
@@ -33,21 +40,86 @@ export function CreateAssessmentClientPage() {
   
   const allTags = [...new Set(problems.flatMap(p => p.tags))];
 
-  const handleSubmit = () => {
-    // In a real app, this would save the assessment to a database
-    // and redirect to the assessment page.
-    console.log({
-      title: assessmentTitle,
-      mode: selectionMode,
-      ...(selectionMode === 'manual' && { problems: selectedProblems }),
-      ...(selectionMode === 'random' && {
-        count: numQuestions,
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-      }),
-    });
-    // For now, we can just show an alert and stay on the page.
-    alert('Assessment created! Check the console for details.');
+  const handleSubmit = async () => {
+    if (!assessmentTitle.trim()) {
+      toast({ variant: 'destructive', title: 'Title is required' });
+      return;
+    }
+
+    let problemIds: string[];
+    if (selectionMode === 'manual') {
+      if (selectedProblems.length === 0) {
+        toast({ variant: 'destructive', title: 'Select at least one problem' });
+        return;
+      }
+      problemIds = selectedProblems;
+    } else {
+      const filterTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+      let pool = problems;
+      if (filterTags.length > 0) {
+        pool = problems.filter(p => p.tags.some(t => filterTags.includes(t)));
+      }
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      problemIds = shuffled.slice(0, Math.min(numQuestions, shuffled.length)).map(p => p.id);
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await createAssessment({
+        title: assessmentTitle,
+        problemIds,
+        mode: selectionMode,
+      });
+      setCreatedId(result.id);
+      toast({ title: 'Assessment created successfully!' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Failed to create assessment' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (createdId) {
+    const assessmentUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/problems/${createdId}`;
+    return (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Card className="max-w-2xl mx-auto text-center">
+          <CardHeader>
+            <div className="mx-auto mb-4">
+              <CheckCircle className="h-16 w-16 text-green-500" />
+            </div>
+            <CardTitle className="text-2xl">Assessment Created!</CardTitle>
+            <CardDescription>
+              Share the link below with your candidates.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+              <code className="text-sm flex-1 text-left truncate">{assessmentUrl}</code>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  navigator.clipboard.writeText(assessmentUrl);
+                  toast({ title: 'Copied to clipboard!' });
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Assessment ID: <code className="font-mono">{createdId}</code>
+            </p>
+          </CardContent>
+          <CardFooter className="justify-center">
+            <Button variant="outline" onClick={() => { setCreatedId(null); setAssessmentTitle(''); setSelectedProblems([]); }}>
+              Create Another
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -105,6 +177,11 @@ export function CreateAssessmentClientPage() {
                         <p className="text-sm text-muted-foreground line-clamp-2">
                           {problem.description}
                         </p>
+                        <div className="flex gap-1 pt-1">
+                          {problem.tags.map(tag => (
+                            <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -149,8 +226,12 @@ export function CreateAssessmentClientPage() {
           </Tabs>
         </CardContent>
         <CardFooter>
-          <Button onClick={handleSubmit} className="w-full">
-            Create Assessment
+          <Button onClick={handleSubmit} className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
+            ) : (
+              'Create Assessment'
+            )}
           </Button>
         </CardFooter>
       </Card>

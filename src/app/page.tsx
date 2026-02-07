@@ -9,7 +9,8 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowRight, Clock, Layers } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -25,14 +26,32 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="mt-12 grid gap-8 md:grid-cols-2">
+        <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {problems.map((problem) => (
             <Card key={problem.id} className="flex flex-col overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300">
               <CardHeader>
-                <CardTitle className="text-2xl font-bold">{problem.title}</CardTitle>
-                <CardDescription className="pt-2 line-clamp-3 h-[72px]">{problem.description}</CardDescription>
+                <CardTitle className="text-xl font-bold">{problem.title}</CardTitle>
+                <CardDescription className="pt-2 line-clamp-2">{problem.description}</CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow" />
+              <CardContent className="flex-grow space-y-3">
+                <div className="flex flex-wrap gap-1.5">
+                  {problem.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Layers className="h-3.5 w-3.5" />
+                    {problem.logs.length} services
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    ~15 min
+                  </span>
+                </div>
+              </CardContent>
               <CardFooter>
                 <Button asChild className="w-full" variant="outline">
                   <Link href={`/problems/${problem.id}`}>

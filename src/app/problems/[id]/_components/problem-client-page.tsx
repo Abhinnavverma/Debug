@@ -32,6 +32,10 @@ import {
   ListChecks,
   Rocket,
   Info,
+  BookOpen,
+  Target,
+  AlertTriangle,
+  MessageSquare,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
@@ -108,6 +112,12 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
   };
   
   const onFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (!preAttemptData) {
+      e.preventDefault();
+      setIsPreAttemptDialogOpen(true);
+      return;
+    }
+
     const end = Date.now();
     const events = [
       { tab: problem.logs[0].service, timestamp: startTimeRef.current },
@@ -309,6 +319,45 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
                   Unlock Official Explanation
                 </Button>
               </CardFooter>
+            </Card>
+          )}
+
+          {state.learnerFeedback && (
+            <Card className="mt-8 border-blue-200 shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-blue-600">
+                  <BookOpen className="h-5 w-5" /> Personalized Coaching Feedback
+                </CardTitle>
+                <CardDescription>
+                  AI-generated insights on your debugging process — not just the answer, but how you got there.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Target className="h-4 w-4 text-green-600" /> Strengths
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{state.learnerFeedback.strengths}</p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-amber-600" /> Areas for Improvement
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{state.learnerFeedback.areasForImprovement}</p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500" /> Blind Spots
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{state.learnerFeedback.blindSpots}</p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-blue-500" /> Overall Feedback
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{state.learnerFeedback.overallFeedback}</p>
+                </div>
+              </CardContent>
             </Card>
           )}
 

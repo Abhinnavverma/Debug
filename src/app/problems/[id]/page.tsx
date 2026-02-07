@@ -8,8 +8,9 @@ export async function generateStaticParams() {
   }));
 }
 
-export default function ProblemPage({ params }: { params: { id: string } }) {
-  const problem = problems.find((p) => p.id === params.id);
+export default async function ProblemPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const problem = problems.find((p) => p.id === id);
 
   if (!problem) {
     notFound();

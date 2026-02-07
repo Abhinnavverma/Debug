@@ -9,7 +9,7 @@ export function Header() {
         <Link href="/" className="flex items-center gap-3">
           <Bug className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold text-foreground font-headline">
-            DebugPro
+            Breakpoint
           </h1>
         </Link>
         <div className="flex items-center gap-2">

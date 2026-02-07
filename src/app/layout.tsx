@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Header } from '@/components/layout/header';
 
 export const metadata: Metadata = {
-  title: 'DebugPro',
+  title: 'Breakpoint',
   description: 'Realistic production-debugging scenarios for learning and hiring.',
 };
 

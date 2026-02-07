@@ -4,10 +4,13 @@ import {
   analyzeCandidateSkills,
   type AnalyzeCandidateSkillsOutput,
 } from '@/ai/flows/analyze-candidate-debug-skills';
+import {
+  provideLearnerDebuggingFeedback,
+  type LearnerDebuggingFeedbackOutput,
+} from '@/ai/flows/provide-learner-debugging-feedback';
 import type { Problem } from '@/lib/data';
 import { z } from 'zod';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { db } from '@/lib/firebase-admin';
 import type { Attempt, PreAttemptData } from '@/types/analytics';
 
 const formSchema = z.object({
@@ -17,6 +20,7 @@ const formSchema = z.object({
 
 export type FormState = {
   feedback?: AnalyzeCandidateSkillsOutput;
+  learnerFeedback?: LearnerDebuggingFeedbackOutput;
   error?: string;
   fieldErrors?: {
     diagnosis?: string[];
@@ -25,32 +29,16 @@ export type FormState = {
 };
 
 async function saveAttempt(attemptData: Omit<Attempt, 'createdAt'>) {
-    const attempt: Attempt = {
-        ...attemptData,
-        createdAt: new Date().toISOString()
-    };
+  const attempt: Attempt = {
+    ...attemptData,
+    createdAt: new Date().toISOString(),
+  };
 
-    try {
-        const filePath = path.join(process.cwd(), 'src/lib/analytics-data.json');
-        let attempts: Attempt[] = [];
-        try {
-            const data = await fs.readFile(filePath, 'utf-8');
-            attempts = JSON.parse(data);
-        } catch (readError) {
-            // File might not exist yet, which is fine.
-            if ((readError as NodeJS.ErrnoException).code !== 'ENOENT') {
-                console.error('Failed to read analytics data file:', readError);
-            }
-        }
-        
-        attempts.push(attempt);
-
-        await fs.writeFile(filePath, JSON.stringify(attempts, null, 2));
-
-    } catch (error) {
-        console.error('Failed to save attempt:', error);
-        // We don't want to block the user feedback for a failed analytics save.
-    }
+  try {
+    await db.collection('attempts').add(attempt);
+  } catch (error) {
+    console.error('Failed to save attempt to Firestore:', error);
+  }
 }
 
 
@@ -82,23 +70,31 @@ export async function getFeedback(
   }
 
   try {
-    const feedback = await analyzeCandidateSkills({
-      problemDescription: problem.description,
-      evaluationRubric: problem.evaluationRubric,
-      diagnosis,
-      nextSteps,
-      interactionData,
-    });
-    
-    // Save analytics data in the background, don't block response
-    saveAttempt({
-        problemId: problem.id,
-        ...preAttemptData,
-        totalTimeSpent,
-        feedback,
+    const [feedback, learnerFeedback] = await Promise.all([
+      analyzeCandidateSkills({
+        problemDescription: problem.description,
+        evaluationRubric: problem.evaluationRubric,
+        diagnosis,
+        nextSteps,
+        interactionData,
+      }),
+      provideLearnerDebuggingFeedback({
+        problemDescription: problem.description,
+        diagnosis,
+        nextSteps,
+        interactionData,
+      }),
+    ]);
+
+    // Save analytics data — properly awaited so no data is silently lost
+    await saveAttempt({
+      problemId: problem.id,
+      ...preAttemptData,
+      totalTimeSpent,
+      feedback,
     });
 
-    return { feedback };
+    return { feedback, learnerFeedback };
   } catch (e) {
     console.error(e);
     return { error: 'Failed to get feedback from AI. Please try again.' };

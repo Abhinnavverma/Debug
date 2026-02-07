@@ -1,4 +1,4 @@
-# **App Name**: DebugPro
+# **App Name**: Breakpoint
 
 ## Core Features:
 
