@@ -36,6 +36,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { PreAttemptDialog } from './PreAttemptDialog';
+import type { PreAttemptData } from '@/types/analytics';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -74,6 +76,8 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
 
   const { toast } = useToast();
   const [showExplanation, setShowExplanation] = useState(false);
+  const [isPreAttemptDialogOpen, setIsPreAttemptDialogOpen] = useState(true);
+  const [preAttemptData, setPreAttemptData] = useState<PreAttemptData | null>(null);
 
   // Interaction tracking state
   const startTimeRef = useRef(Date.now());
@@ -111,6 +115,8 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
       { tab: 'submit', timestamp: end }
     ];
 
+    let totalTimeSpent = (end - startTimeRef.current) / 1000;
+
     const timeSpentPerSection: { [key: string]: number } = {};
     for (let i = 0; i < events.length - 1; i++) {
         const currentEvent = events[i];
@@ -123,7 +129,7 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
 
     const navigationOrder = events.map(e => e.tab).slice(0, -1);
 
-    const data = {
+    const interactionData = {
         timeSpentPerSection,
         navigationOrder,
         highlights: [], // This feature is not implemented on the client yet
@@ -131,7 +137,14 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
         missedSignals: [], // This feature is not implemented on the client yet
     };
 
-    (e.currentTarget.elements.namedItem('interactionData') as HTMLInputElement).value = JSON.stringify(data);
+    (e.currentTarget.elements.namedItem('interactionData') as HTMLInputElement).value = JSON.stringify(interactionData);
+    (e.currentTarget.elements.namedItem('totalTimeSpent') as HTMLInputElement).value = totalTimeSpent.toString();
+
+    if (preAttemptData) {
+        (e.currentTarget.elements.namedItem('background') as HTMLInputElement).value = preAttemptData.background;
+        (e.currentTarget.elements.namedItem('experience') as HTMLInputElement).value = preAttemptData.experience;
+        (e.currentTarget.elements.namedItem('prodExperience') as HTMLInputElement).value = preAttemptData.prodExperience;
+    }
   };
 
   const verdictColor =
@@ -143,7 +156,19 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
 
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <>
+    <PreAttemptDialog
+        isOpen={isPreAttemptDialogOpen}
+        onClose={() => setIsPreAttemptDialogOpen(false)}
+        onSubmit={(data) => {
+          setPreAttemptData(data);
+          setIsPreAttemptDialogOpen(false);
+          startTimeRef.current = Date.now(); // Start timer after form submission
+        }}
+      />
+    <div className={cn("container mx-auto px-4 sm:px-6 lg:px-8 py-8", {
+        'blur-sm pointer-events-none': isPreAttemptDialogOpen,
+      })}>
       <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8">
         <div className="lg:col-span-1 mb-8 lg:mb-0">
           <Card className="sticky top-24 shadow-md">
@@ -193,6 +218,11 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
             <form action={formAction} onSubmit={onFormSubmit}>
               <CardContent className="space-y-4">
                 <input type="hidden" name="interactionData" />
+                <input type="hidden" name="totalTimeSpent" />
+                <input type="hidden" name="background" />
+                <input type="hidden" name="experience" />
+                <input type="hidden" name="prodExperience" />
+
                 <div>
                   <label htmlFor="diagnosis" className="block text-sm font-medium mb-1">Your Diagnosis</label>
                   <Textarea id="diagnosis" name="diagnosis" rows={4} placeholder="e.g., The latency appears to be caused by..." onChange={handleDiagnosisChange} />
@@ -306,5 +336,6 @@ export function ProblemClientPage({ problem }: { problem: Problem }) {
         </div>
       </div>
     </div>
+    </>
   );
 }
