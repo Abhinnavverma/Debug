@@ -1,11 +1,18 @@
-import { initializeApp, getApps } from 'firebase-admin/app';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 if (getApps().length === 0) {
-  // On Firebase App Hosting, Application Default Credentials are automatically available.
-  // For local development, run: gcloud auth application-default login
-  // Or set GOOGLE_APPLICATION_CREDENTIALS to a service account key file path.
-  initializeApp();
+  // Vercel: use FIREBASE_SERVICE_ACCOUNT_KEY env var (JSON string)
+  // Local: falls back to GOOGLE_APPLICATION_CREDENTIALS file path
+  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+  if (serviceAccountKey) {
+    const parsed = JSON.parse(serviceAccountKey);
+    initializeApp({ credential: cert(parsed) });
+  } else {
+    // Local dev: uses GOOGLE_APPLICATION_CREDENTIALS file path
+    initializeApp();
+  }
 }
 
 export const db = getFirestore();
