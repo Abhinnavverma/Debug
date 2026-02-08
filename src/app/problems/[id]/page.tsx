@@ -2,6 +2,8 @@ import { problems } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import { ProblemClientPage } from './_components/problem-client-page';
 
+
+export const maxDuration = 60;
 export async function generateStaticParams() {
   return problems.map((problem) => ({
     id: problem.id,
